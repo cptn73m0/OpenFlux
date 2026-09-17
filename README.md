@@ -384,8 +384,8 @@ so a new backend gets batching for free.
 - [ ] Queue priority: SYN/FIN/RST + pure ACKs get a high-priority channel
 - [ ] ACK aggregation: suppress tunnel ACKs, batch-deliver to gVisor every 20ms
 - [ ] Dynamic TCP buffer sizing: match gVisor buffers to transport bandwidth
-- [ ] Binary WebSocket frames (drop base64 on Volga, save 33% wire overhead)
-- [ ] Switch from vyandex (HTTP relay + polling) to yandex (persistent WS/Socket.IO)
+- [x] Binary WebSocket frames (drop base64 on yandex/yandex transports, save 33% wire overhead)
+- [x] Switch from vyandex (HTTP relay + polling) to yandex (persistent WS/Socket.IO)
 - [ ] Benchmark framework: --role=bench-send --bench-bytes=N for regression testing
 - [ ] Metrics: expose transport stats to Prometheus or a simple HTTP endpoint
 
