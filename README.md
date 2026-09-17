@@ -341,6 +341,7 @@ your transport in the `main.go` switch block (see `transport/mailru/` for a
 complete example). The batched codec (`BatchedTransport`) wraps any transport,
 so a new backend gets batching for free.
 
+
 ## TODO
 
 - **L3 exit on Windows and macOS.** The L3 exit currently works on Linux
@@ -348,6 +349,56 @@ so a new backend gets batching for free.
   package (Windows) exists but is not wired to the L3 forwarder yet. A native
   macOS L3 exit is not implemented.
 - **Run the exit node (QEMU).**
+
+## Performance tuning (exit node)
+
+| Setting | Recommended value | Impact |
+|---------|------------------|--------|
+| `--mode=l3` | always on Linux with root | Eliminates gVisor double-termination. 2-3x throughput |
+| `--codec=batched` (default) | pre-merge batched.go + framing.go | zstd coalescing, ~10-50x fewer transport messages |
+| `GOGC=20` | set in main.go for exit nodes | Tight GC under load |
+| `go` version | >= 1.23 | GOMEMLIMIT, better GC, cmp package, ~30% less heap |
+| kernel `tcp_rmem` | `4096 262144 16777216` | Larger default + max receive window |
+| kernel `tcp_wmem` | `4096 65536 16777216` | Larger default + max send window |
+| `tcp_congestion_control` | `bbr` | Better throughput on lossy transports |
+| `net.core.default_qdisc` | `fq` | Fair queuing for BBR |
+| iptables RST rule | `-A OUTPUT -p tcp --tcp-flags RST RST -s <ip> -j DROP` | Prevents kernel RSTs from tearing l3 connections |
+| `--debug` | OFF in production | Removes per-packet runtime.Caller overhead |
+
+## Roadmap
+
+### Short-term (next few commits)
+
+- [x] Update Go to 1.23+ (GOMEMLIMIT, better GC, modern stdlib)
+- [x] Switch exit node to --mode=l3 (raw SNAT/DNAT, no double termination)
+- [x] Use batched+zstd codec (coalescing, fewer WebSocket messages)
+- [x] Remove --debug from production exit node
+- [x] Configure kernel TCP buffers for tunnel workload (rmem 16MB, wmem 16MB)
+- [x] Enable BBR congestion control + fq qdisc
+- [x] Install scoped iptables RST-drop rule
+- [ ] Add backpressure between gVisor stack and transport (limit inflight packets)
+- [ ] Reduce Volga WorkerCount from 2000 to 128 for 1.9GB VPS
+
+### Medium-term
+
+- [ ] Queue priority: SYN/FIN/RST + pure ACKs get a high-priority channel
+- [ ] ACK aggregation: suppress tunnel ACKs, batch-deliver to gVisor every 20ms
+- [ ] Dynamic TCP buffer sizing: match gVisor buffers to transport bandwidth
+- [ ] Binary WebSocket frames (drop base64 on Volga, save 33% wire overhead)
+- [ ] Switch from vyandex (HTTP relay + polling) to yandex (persistent WS/Socket.IO)
+- [ ] Benchmark framework: --role=bench-send --bench-bytes=N for regression testing
+- [ ] Metrics: expose transport stats to Prometheus or a simple HTTP endpoint
+
+### Long-term
+
+- [ ] L3 exit on Windows via WinDivert (code exists, not wired)
+- [ ] L3 exit on macOS via native utun + raw sockets
+- [ ] QUIC transport (HTTP/3 + WebTransport)
+- [ ] Multi-hop: chain exit nodes for overlay routing
+- [ ] Web UI for exit node management + real-time stats
+- [ ] Telegram bot integration for server alerts (already running on this server)
+
+## License
 
 ## License
 
