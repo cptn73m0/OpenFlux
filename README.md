@@ -376,6 +376,7 @@ so a new backend gets batching for free.
 - [x] Configure kernel TCP buffers for tunnel workload (rmem 16MB, wmem 16MB)
 - [x] Enable BBR congestion control + fq qdisc
 - [x] Install scoped iptables RST-drop rule
+- [x] Fix kernel rp_filter=0, accept_local=1 for L3 SNAT
 - [ ] Add backpressure between gVisor stack and transport (limit inflight packets)
 - [ ] Reduce Volga WorkerCount from 2000 to 128 for 1.9GB VPS
 
